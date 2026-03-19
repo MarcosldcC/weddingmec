@@ -6,43 +6,7 @@ import { Button } from '@/components/ui/button'
 import GiftCard from '@/components/gift-card'
 import ReservationModal from '@/components/reservation-modal'
 import PIXContributionForm from '@/components/pix-contribution-form'
-import PIXQRCode from '@/components/pix-qrcode'
 import PIXContributionList from '@/components/pix-contribution-list'
-import { Copy, Check } from 'lucide-react'
-
-function PixKeyBox({ pixKey }: { pixKey: string | null }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = () => {
-    if (!pixKey) return
-    navigator.clipboard.writeText(pixKey)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="bg-secondary/10 rounded-lg p-4 sm:p-6 space-y-3">
-      <h3 className="font-serif text-lg font-bold text-primary">Chave PIX</h3>
-      <p className="text-sm text-foreground/60">
-        Você também pode usar a seguinte chave PIX:
-      </p>
-      <div className="flex items-center gap-2 bg-background rounded px-4 py-3">
-        <span className="font-mono text-sm text-foreground/80 break-all flex-1">
-          {pixKey ?? 'Defina a chave PIX no Admin'}
-        </span>
-        {pixKey && (
-          <button
-            onClick={handleCopy}
-            className="shrink-0 text-foreground/50 hover:text-primary transition-colors"
-            title="Copiar chave PIX"
-          >
-            {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
 
 interface Gift {
   id: string
@@ -84,7 +48,6 @@ export default function GiftsPage() {
 
   // PIX state
   const [pixData, setPixData] = useState<PIXData | null>(null)
-  const [pixSettings, setPixSettings] = useState<{ pix_key: string | null; pix_qr_url: string | null } | null>(null)
   const [pixLoading, setPixLoading] = useState(true)
 
   useEffect(() => {
@@ -105,13 +68,9 @@ export default function GiftsPage() {
   useEffect(() => {
     const fetchPix = async () => {
       try {
-        const [pixRes, settingsRes] = await Promise.all([
-          fetch('/api/pix'),
-          fetch('/api/pix/settings'),
-        ])
-        const [pixJson, settingsJson] = await Promise.all([pixRes.json(), settingsRes.json()])
+        const pixRes = await fetch('/api/pix')
+        const pixJson = await pixRes.json()
         setPixData(pixJson)
-        setPixSettings(settingsJson)
       } catch {
         // silently fail
       } finally {
@@ -293,39 +252,25 @@ export default function GiftsPage() {
         {/* PIX Tab */}
         {activeTab === 'pix' && (
           <div className="space-y-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Left: QR Code */}
-              <div className="space-y-8">
-                <p className="text-foreground/70 text-lg">
-                  Escaneie o código QR abaixo ou utilize a chave PIX para fazer sua contribuição.
-                </p>
-                <div className="bg-card rounded-lg p-6 sm:p-8 border border-border/50">
-                  <PIXQRCode qrUrl={pixSettings?.pix_qr_url ?? null} />
-                </div>
-                <PixKeyBox pixKey={pixSettings?.pix_key ?? null} />
-              </div>
-
-              {/* Right: Form + Stats */}
-              <div className="space-y-8">
-                <PIXContributionForm onSuccess={handleContributionSuccess} />
-                {!pixLoading && pixData && (
-                  <div className="bg-card rounded-lg p-4 sm:p-6 border border-border/50 space-y-4">
-                    <h3 className="font-serif text-lg font-bold text-primary">Resumo de Contribuições</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-secondary/10 rounded p-4 text-center">
-                        <div className="font-serif text-3xl font-bold text-primary">{pixData.count}</div>
-                        <p className="text-sm text-foreground/60 mt-1">Contribuintes</p>
+            <div className="max-w-md mx-auto space-y-8">
+              <PIXContributionForm onSuccess={handleContributionSuccess} />
+              {!pixLoading && pixData && (
+                <div className="bg-card rounded-lg p-4 sm:p-6 border border-border/50 space-y-4">
+                  <h3 className="font-serif text-lg font-bold text-primary">Resumo de Contribuições</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-secondary/10 rounded p-4 text-center">
+                      <div className="font-serif text-3xl font-bold text-primary">{pixData.count}</div>
+                      <p className="text-sm text-foreground/60 mt-1">Contribuintes</p>
+                    </div>
+                    <div className="bg-secondary/10 rounded p-4 text-center">
+                      <div className="font-serif text-3xl font-bold text-primary">
+                        R$ {(pixData.total / 100).toFixed(2)}
                       </div>
-                      <div className="bg-secondary/10 rounded p-4 text-center">
-                        <div className="font-serif text-3xl font-bold text-primary">
-                          R$ {(pixData.total / 100).toFixed(2)}
-                        </div>
-                        <p className="text-sm text-foreground/60 mt-1">Total Arrecadado</p>
-                      </div>
+                      <p className="text-sm text-foreground/60 mt-1">Total Arrecadado</p>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {!pixLoading && pixData && pixData.contributions.length > 0 && (
